@@ -4,6 +4,8 @@ import torch
 
 
 def get_free_device():
+    return 'cpu'
+    #return 'cuda:0'
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == 'cuda':
         os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')

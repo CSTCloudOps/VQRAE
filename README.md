@@ -3,6 +3,12 @@
 The source code for paper “Anomaly Detection in Time Series with Robust
 Variational Quasi-Recurrent Autoencoders”
 
+## UTS AD
+```bash
+bash run.sh
+# results are shown in all_f1_together_train.txt
+```
+
 ## Abstract
 
 We propose variational quasi-recurrent autoencoders (VQRAEs) to enable

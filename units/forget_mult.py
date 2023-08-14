@@ -94,8 +94,8 @@ class GPUForgetMult(torch.autograd.Function):
     configured_gpus = {}
     ptx = None
 
-    def __init__(self):
-        super(GPUForgetMult, self).__init__()
+    # def __init__(self):
+    #     super(GPUForgetMult, self).__init__()
 
     def compile(self):
         if self.ptx is None:
@@ -117,9 +117,11 @@ class GPUForgetMult(torch.autograd.Function):
             self.forget_mult, self.bwd_forget_mult, self.stream)
 
         self.forget_mult, self.bwd_forget_mult, self.stream = GPUForgetMult.configured_gpus[torch.cuda.current_device()]
-
+    @staticmethod
     def forward(self, f, x, hidden_init=None):
         self.compile()
+        
+
         seq_size, batch_size, hidden_size = f.size()
         result = f.new(seq_size + 1, batch_size, hidden_size)
         # We only zero the result array (result[0]) if we don't set a hidden initial state
@@ -137,9 +139,10 @@ class GPUForgetMult(torch.autograd.Function):
         self.save_for_backward(f, x, hidden_init)
         self.result = result
         return result[1:, :, :]
-
+    @staticmethod
     def backward(self, grad_h):
         self.compile()
+
         f, x, hidden_init = self.saved_tensors
         h = self.result
         ###
@@ -179,14 +182,20 @@ class ForgetMult(torch.nn.Module):
         # Use CUDA by default unless it's available
         # use_cuda = use_cuda and torch.cuda.is_available()
         use_cuda = torch.cuda.is_available()
+        use_cuda = False
         # Ensure the user is aware when ForgetMult is not GPU version as it's far faster
         if use_cuda:
             assert f.is_cuda and x.is_cuda, 'GPU ForgetMult with fast element-wise CUDA kernel requested but tensors not on GPU'
         ###
         # Avoiding 'RuntimeError: expected a Variable argument, but got NoneType' when hidden_init is None
+        gpu_forget = GPUForgetMult()
         if hidden_init is None:
-            return GPUForgetMult()(f, x) if use_cuda else CPUForgetMult()(f, x)
-        return GPUForgetMult()(f, x, hidden_init) if use_cuda else CPUForgetMult()(f, x, hidden_init)
+            return gpu_forget.apply(f, x) if use_cuda else CPUForgetMult()(f, x)
+        return gpu_forget.apply(f, x, hidden_init) if use_cuda else CPUForgetMult()(f, x, hidden_init)
+    
+        # if hidden_init is None:
+        #     return GPUForgetMult().apply(f, x) if use_cuda else CPUForgetMult()(f, x)
+        # return GPUForgetMult().apply(f, x, hidden_init) if use_cuda else CPUForgetMult()(f, x, hidden_init)
 ###
 
 if __name__ == '__main__':

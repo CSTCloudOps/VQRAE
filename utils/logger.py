@@ -240,6 +240,17 @@ def create_logger(dataset, train_logger_name, file_logger_name, meta_logger_name
         # third file logger
         train_logger = setup_logger(train_logger_name + model_name + str(pid),
                                     './logs/{}/train_SWAT_synthetic_{}_{}.log'.format(dataset, model_name, pid))
+    elif dataset == 113 or dataset ==114 or dataset ==115 or dataset ==116 or dataset>116:
+        # first file logger
+        #os.mkdir('./logs/{}'.format(dataset))
+        file_logger = setup_logger(file_logger_name + model_name + str(pid),
+                                   './logs/{}/file_{}_{}.log'.format(dataset, model_name, pid))
+        # second file logger
+        meta_logger = setup_logger(meta_logger_name + model_name + str(pid),
+                                   './logs/{}/meta_{}_{}.log'.format(dataset, model_name, pid))
+        # third file logger
+        train_logger = setup_logger(train_logger_name + model_name + str(pid),
+                                    './logs/{}/train_{}_{}.log'.format(dataset, model_name, pid))
     elif dataset == 11 or dataset == 111 or dataset == 112:
         if dataset == 11:
             subset = 'WADI_ALL'

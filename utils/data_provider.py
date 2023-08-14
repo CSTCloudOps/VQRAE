@@ -17,8 +17,32 @@ def rolling_window_2D(a, n):
     # n: Group/sliding window length
     return a[np.arange(a.shape[0] - n + 1)[:, None] + np.arange(n)]
 
+def rolling_window_2D_2(a, n):
+    # a: 2D Input array
+    # n: Group/sliding window length
+    all_a = []
+    for i in a:
+        print(i[np.arange(i.shape[0] - n + 1)[:, None] + np.arange(n)].shape)
+        all_a.append(i[np.arange(i.shape[0] - n + 1)[:, None] + np.arange(n)])
+    print(np.concatenate(all_a,axis=0).shape)
+    return np.concatenate(all_a,axis=0)
+
 
 def cutting_window_2D(a, n):
+    # a: 2D Input array
+    # n: Group/sliding window length
+    split_positions = list(range(n, a.shape[0], n))
+    split_result = np.array_split(a, split_positions)
+    np_result = []
+    if split_result[-1].shape[0] == split_result[-2].shape[0]:
+        for array in split_result[:-1]:
+            np_result.append(array)
+    else:
+        for array in split_result[:-1]:
+            np_result.append(array)
+    return np.stack(np_result)
+
+def cutting_window_2D_2(a, n):
     # a: 2D Input array
     # n: Group/sliding window length
     split_positions = list(range(n, a.shape[0], n))
@@ -299,7 +323,10 @@ def create_batch_data(X, y=None, cutting_size=128, shuffle=False, from_numpy=Fal
 def read_S5_dataset(file_name, normalize=True):
     abnormal = pd.read_csv(file_name, header=0, index_col=None)
     abnormal_data = abnormal['value'].values.astype(dtype='float32')
-    abnormal_label = abnormal['is_anomaly'].values
+    if 'anomaly' in abnormal:
+        abnormal_label = abnormal['anomaly'].values
+    else:
+        abnormal_label = abnormal['is_anomaly'].values
     # Normal = 0, Abnormal = 1 => # Normal = 1, Abnormal = -1
 
     abnormal_data = np.expand_dims(abnormal_data, axis=1)
@@ -311,11 +338,12 @@ def read_S5_dataset(file_name, normalize=True):
 
     abnormal_label[abnormal_label == 1] = -1
     abnormal_label[abnormal_label == 0] = 1
+    print('shape',abnormal_data.shape,abnormal_label.shape)
     return abnormal_data, abnormal_label
 
 
 def read_NAB_dataset(file_name, normalize=True):
-    with open('../data/NAB/labels/combined_windows.json') as data_file:
+    with open('../../NAB/labels/combined_windows.json') as data_file:
         json_label = json.load(data_file)
     abnormal = pd.read_csv(file_name, header=0, index_col=0)
     abnormal['label'] = 1
@@ -517,6 +545,49 @@ def read_SMD_dataset(file_name, normalize=True):
     test_label[test_label != 0] = -1
     test_label[test_label == 0] = 1
     return train_data.astype(dtype='float32'), test_data.astype(dtype='float32'), np.expand_dims(test_label.to_numpy(), axis=1)
+
+def read_AIOPS_dataset(file_name, normalize=True):
+    data = pd.read_csv(file_name,index_col=None)
+    data = data.fillna(0)
+    l = int(len(data)*0.5)
+    train_data = np.asarray(data['value'])[:l].reshape(-1,1)
+    test_data = np.asarray(data['value'])[l:].reshape(-1,1)
+    test_label = np.asarray(data['label'])[l:].reshape(-1,1)
+    if normalize:
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        scaler.fit(train_data)
+        train_data = scaler.transform(train_data)
+        test_data = scaler.transform(test_data)
+    test_label[test_label != 0] = -1
+    test_label[test_label == 0] = 1
+    return train_data.astype(dtype='float32'), test_data.astype(dtype='float32'), test_label
+
+def read_AIOPS_dataset2(path, normalize=True):
+    all_train = []
+    all_test = []
+    all_label = []
+    file_list = os.listdir(path)
+    for file in file_list:
+        data = pd.read_csv(os.path.join(path,file),index_col=None)
+        data = data.fillna(0)
+        l = int(len(data)*0.5)
+        train_data = np.asarray(data['value'])[:l].reshape(-1,1)
+        test_data = np.asarray(data['value'])[l:].reshape(-1,1)
+        test_label = np.asarray(data['label'])[l:].reshape(-1,1)
+        if normalize:
+            scaler = MinMaxScaler(feature_range=(0, 1))
+            scaler.fit(train_data)
+            train_data = scaler.transform(train_data)
+            test_data = scaler.transform(test_data)
+        test_label[test_label != 0] = -1
+        test_label[test_label == 0] = 1
+        train_data = train_data.astype(dtype='float32')
+        test_data = test_data.astype(dtype='float32')
+        all_train.append(train_data)
+        all_test.append(test_data)
+        all_label.append(test_label)
+    return all_train,all_test,all_label
+    
 
 
 def read_WADI_dataset(file_name, normalize=True, sampling=0.1):
